@@ -1,3 +1,9 @@
+# Instalação e carregamento do pacote "zoo" se necessário
+if(!require("zoo", character.only = TRUE)){
+  install.packages("zoo", dependencies = TRUE)
+  library(zoo, character.only = TRUE)
+}  
+
 periodograma <- function(z, fr = "default") {
   n <- length(z)  # Tamanho da série
   
@@ -106,4 +112,70 @@ box_pierce_plot <- function(residuals) {
   
   # Adicionando grid
   grid()
+}
+
+
+# Função para plotar as previsões
+plot_pred <- function(model, h = 10, nivel_conf = 0.95) {
+  # Obter as previsões e os intervalos de confiança
+  pred1 <- forecast(model, h = h, level = nivel_conf * 100)
+  
+  # Valores ajustados na série existente
+  mu <- as.numeric(model$fitted)
+  LI <- rep(NA, length(mu))  # Limite inferior (NA para os valores ajustados)
+  LS <- rep(NA, length(mu))  # Limite superior (NA para os valores ajustados)
+  
+  # Criar data frame para os valores ajustados
+  data.pred1 <- data.frame(mu, LI, LS)
+  colnames(data.pred1) <- c("mu", "LI", "LS")
+  
+  # Adicionar previsões ao data frame
+  zz <- as.data.frame(pred1)
+  colnames(zz) <- c("mu", "LI", "LS")
+  data.pred1 <- rbind(data.pred1, zz)
+  
+  # Criar sequência de tempo baseada na frequência da série
+  freq <- frequency(model$x)
+  tempo <- time(model$x)
+  tempo <- as.Date(as.yearmon(tempo))  # Converter para formato de data
+  
+  # Ajuste para a frequência correta (mensal, trimestral, semanal, anual)
+  if (freq == 12) {
+    # Mensal
+    data.pred1$T <- seq(tempo[1], by = "month", length.out = nrow(data.pred1))
+  } else if (freq == 4) {
+    # Trimestral
+    data.pred1$T <- seq(tempo[1], by = "quarter", length.out = nrow(data.pred1))
+  } else if (freq == 52) {
+    # Semanal
+    data.pred1$T <- seq(tempo[1], by = "week", length.out = nrow(data.pred1))
+  } else if (freq == 1) {
+    # Anual
+    data.pred1$T <- seq(tempo[1], by = "year", length.out = nrow(data.pred1))
+  } else if(freq == 365) {
+    # Outra frequência (como diária)
+    data.pred1$T <- seq(tempo[1], by = "day", length.out = nrow(data.pred1))
+  }
+  
+  # Adicionar a série original e previsões ao data frame
+  Y1 <- as.numeric(model$x)
+  np <- length(pred1$mean)
+  X1 <- rep(NA, np)  # Preencher os valores futuros com NA
+  data.pred1$Y <- c(Y1, X1)
+  
+  # Criar o gráfico
+  p <- ggplot(data = data.pred1, aes(x = T)) +
+    geom_ribbon(aes(ymin = LI, ymax = LS), fill = "grey70") +  # Intervalo de confiança
+    geom_point(aes(y = Y), color = "blue") +  # Pontos dos valores reais em azul
+    geom_line(aes(y = Y), color = "blue") +  # Linha dos valores reais em azul
+    geom_line(aes(y = mu), color = "red") +  # Linha das previsões em vermelho
+    theme_bw() +
+    labs(y = "Valores", x = "Tempo") +
+    ggtitle("Valores Reais e Previsões com Intervalo de Confiança") +
+    scale_x_date(date_labels = "%m-%Y")
+  
+  # Garantir que o gráfico seja impresso
+  print(p)
+  
+  return( pred1)
 }

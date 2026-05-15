@@ -1,4 +1,7 @@
-
+getwd()
+setwd("/home/rafaelsimoes/Documentos/Séries temporais")
+save.image("/home/rafaelsimoes/Documentos/Séries temporais/dados_bf.RData")
+load(file = "/home/rafaelsimoes/Documentos/Séries temporais/dados_bf.RData")
 install.packages("tidyverse")
 install.packages("readxl")
 install.packages("forecast")
@@ -399,3 +402,42 @@ axis(side = 1,
      labels = anos_meses2[idx_ticks2], 
      las = 2,
      cex.axis = 0.7)
+
+
+
+### serie com taxa de desemprego - IBGE / PNAD Contínua
+
+dados_desemprego <- readr::read_csv(
+  file = "/home/rafaelsimoes/Documentos/Séries temporais/taxa_desemprego.csv"
+)
+
+str(dados_desemprego)
+attach(dados_desemprego)
+names(dados_desemprego)
+
+dados_desemprego <- dados_desemprego |>
+  dplyr::mutate(
+    Data = as.character(Data)
+  )
+dados_desemprego <- dados_desemprego |>
+  tidyr::separate(Data, into = c("ano","mes"), sep="\\.")
+dados_desemprego <- dados_desemprego |>
+  dplyr::mutate(
+    ano = as.double(ano)
+  ) |>
+  dplyr::mutate(
+    mes = as.double(mes)
+  )
+str(dados_desemprego)
+attach(dados_desemprego)
+names(dados_desemprego)
+head(dados_desemprego)
+
+serie_desemprego <- ts(taxa_desemprego, start = c(2012,4), frequency = 12)
+plot(serie_desemprego, 
+     main = "Taxa de Desemprego ao Longo do Tempo",
+     ylab = "Taxa de Desemprego (%)",
+     xlab = "Tempo",
+     col = "blue",
+     type = "l",
+     lwd = 2)
